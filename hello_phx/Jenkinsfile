@@ -1,0 +1,64 @@
+node("jenkins-slave-elixir") {
+    def commit_id = ''
+    stage('preamble') {
+        sh "echo hello elixir "
+        sh "whoami"
+        sh "iex -v"
+        sh "printenv"
+        openshift.withCluster() {
+            openshift.withProject() {
+            echo "Hello from the project running Jenkins: ${openshift.project()}"  
+            }
+        }
+        
+    }
+    stage('checkout') {
+        checkout([$class           : 'GitSCM',
+                branches         : [[name: "*/${PS_GIT_REF}"]],
+                userRemoteConfigs: [[credentialsId: 'myproject-svc-jenkins', url: "${PS_GIT_URI}"]]
+        ]);
+        sh "ls -la"
+        commit_id = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+        echo "${commit_id}"
+        sh "ls -la"
+    }
+    stage('build') {
+        openshift.withCluster() {
+            openshift.withProject() {
+                sh "echo build step"
+                // .related('builds')
+                def bc = openshift.selector("bc", "hello-phx") 
+                bc.describe()
+                // openshift.selector( [ 'bc/hello-phx' ] ).describe()
+                def buildSelector = bc.startBuild()
+                buildSelector.logs('-f')
+            }
+        }
+        /* dir("hello_phx") {
+            sh "ls -la"
+            sh "mix local.hex --force"
+            sh "mix local.rebar --force"
+            sh "mix deps.get"
+            sh "mix compile"
+        } */
+    }
+    stage('test') {
+        /* dir("hello_phx") {
+            sh "ls -la"
+            sh "mix local.hex --force"
+            sh "mix local.rebar --force"
+            sh "mix deps.get"
+            sh "mix test"
+        } */
+    }
+    stage('tag') {
+        openshift.withCluster() {
+            openshift.withProject() {
+                // if everything else succeeded, tag the ${templateName}:latest image as ${templateName}-staging:latest
+                // a pipeline build config for the staging environment can watch for the ${templateName}-staging:latest
+                // image to change and then deploy it to the staging environment
+                openshift.tag("hello-phx:latest", "hello-phx-dev:latest", "hello-phx-dev:${commit_id}")
+            }
+        }
+    }
+}

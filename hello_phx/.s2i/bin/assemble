@@ -1,0 +1,96 @@
+#!/bin/bash -e
+#
+# S2I assemble script for the 'hello-world-elixir' image.
+# The 'assemble' script builds your application source so that it is ready to run.
+#
+# For more information refer to the documentation:
+# https://github.com/openshift/source-to-image/blob/master/docs/builder_image.md
+#
+BASE=`pwd`
+if [[ "$1" == "-h" ]]; then
+  # If the 'hello-world-elixir' assemble script is executed with '-h' flag,
+  # print the usage.
+  exec /usr/libexec/s2i/usage
+fi
+
+# Restore artifacts from the previous build (if they exist).
+#
+if [ "$(ls /tmp/artifacts/ 2>/dev/null)" ]; then
+  echo "---> Restoring build artifacts..."
+  mv /tmp/artifacts/. ./
+fi
+
+echo "---> Installing application source..."
+# whoami
+ls -la
+cp -Rf /tmp/src/. ./
+
+
+echo "---> Copying build secrets..."
+
+# copy secrets from /etc
+ls -la etc
+
+# TODO: if -n ?? in /opt/app-root/etc/*.secret.exs
+# Remove, use a prod build with env specific vars
+# cp *.secret.exs ./apps/kijani/config
+
+echo "---> Building application from source..."
+
+
+# Build web client
+# TODO 
+# 1) Search for dir with package.json
+# 2) utilize env vars $NODE_ENV, $DEV_MODE, $NPM_MIRROR to setup build
+# 2) use $NPM_RUN to run custom script
+if [[ -n "${WEBCLIENT_PATH}" ]]; then
+  # Change the npm registry mirror if provided
+  if [ -n "$NPM_MIRROR" ]; then
+    npm config set registry $NPM_MIRROR
+  fi
+  # TODO: include this in script (use ENV var for output path)
+  # fix-permissions apps/kijani/priv/static/webclient
+  # MY_SCRIPT_VARIABLE="Some default value because DEPLOY_ENV is undefined"
+  cd $WEBCLIENT_PATH
+  # Install deps
+  npm install -d --quiet
+  # TODO: remove this... we shouldn't need this at build time.
+  # this will be injected later into the runnable image
+  # cp $BASE/etc/angular-dev-config src/assets/data/config.json
+  npm run $NPM_RUN
+
+  # save off build artifacts.. should be in dist folder (maybe env var?)
+  if [ -d "dist" ]; then
+    tar -czvf webclient.tar.gz -C dist .
+    cp webclient.tar.gz /tmp
+  fi
+  
+  echo "---> Pruning the node_modules directory"
+	rm -fr node_modules
+
+  # return to base dir
+  cd $BASE
+else
+  # MY_SCRIPT_VARIABLE="${DEPLOY_ENV}"
+  echo "No WEBCLIENT_PATH found..."
+fi
+
+
+# export LANG=en_US.UTF-8
+printenv
+
+# This will be set via the build config ENV variable
+# export MIX_ENV=$BUILD_ENV
+
+mix do deps.get, compile
+
+# ALWAYS do a PROD build
+MIX_ENV=prod mix release --env=prod
+
+# make sure our build is available for later stages
+find ${BASE} -name "*.tar.gz" -exec cp {} /tmp/app.tar.gz \;
+# npm install -d --no-progress
+
+
+
+echo "---> Completed"

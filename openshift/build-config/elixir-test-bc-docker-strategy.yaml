@@ -1,0 +1,29 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: elixir-sample-pipeline-node
+  namespace: myproject
+spec:
+  nodeSelector: {}
+  output: {}
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    contextDir: hello_phx
+    git:
+      ref: master
+      uri: 'https://github.com/shall3790/openshift-microservice.git'
+    sourceSecret:
+      name: svc-jenkins
+    type: Git
+  strategy:
+    jenkinsPipelineStrategy:
+      env:
+        - name: PS_GIT_URI
+          value: 'https://github.com/shall3790/openshift-microservice.git'
+        - name: PS_GIT_REF
+          value: master
+      jenkinsfilePath: Jenkinsfile
+    type: JenkinsPipeline
+  triggers: []

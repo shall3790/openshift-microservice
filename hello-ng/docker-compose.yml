@@ -1,0 +1,12 @@
+version: '3' # specify docker-compose version
+
+# Define the services/containers to be run
+services:
+  angular: #name of the second service
+    container_name: hello-ng
+    ports:
+      - "4200:4200" #specify ports forwarding
+    volumes:
+      - C:/Users/stmhall1/_Git/openshift-microservice/hello-ng:/opt/app
+    image: hlrepomgmt01.hobbylobby.corp:8088/angular-cli:6.0.0-rhel7
+    command: tail -f /dev/null

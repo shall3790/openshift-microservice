@@ -1,0 +1,36 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    app: hello-phx
+  name: hello-phx
+  namespace: myproject
+metadata:
+  name: hello-phx-runtime
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: hello-phx-runtime:latest
+  source:
+    type: Dockerfile
+    dockerfile: |-
+      FROM rhel-atomic-mssql:7.5-229
+      RUN echo "hello"
+    images:
+    - from: 
+        kind: ImageStreamTag
+        name: hello-phx-artifact:latest
+      paths: 
+      - sourcePath: /tmp/hello_phx
+        destinationDir: "."
+  strategy:
+    dockerStrategy:
+      from: 
+        kind: ImageStreamTag
+        name: rhel-atomic:7.5-229
+        namespace: openshift
+    type: Docker
+  triggers:
+  - imageChange: {}
+    type: ImageChange

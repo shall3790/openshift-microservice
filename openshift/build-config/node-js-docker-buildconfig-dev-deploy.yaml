@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  labels:
+    app: nodejs-dockertest
+  name: nodejs-dockertest
+spec:
+  output: 
+    to:
+      kind: ImageStreamTag
+      name: 'nodejs-dockertest:latest'
+  resources: {}
+  source:
+    contextDir: node-js
+    git:
+      ref: master
+      uri: 'https://github.com/shall3790/openshift-microservice.git'
+    sourceSecret:
+      name: account
+    type: Git
+  strategy:
+    dockerStrategy:
+      noCache: true
+    type: Docker

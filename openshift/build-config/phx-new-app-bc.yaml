@@ -1,0 +1,54 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: '2018-04-16T14:39:01Z'
+  labels:
+    app: openshift-microservice
+  name: openshift-microservice
+  namespace: myproject
+  resourceVersion: '9322'
+  selfLink: >-
+    /apis/build.openshift.io/v1/namespaces/myproject/buildconfigs/openshift-microservice
+  uid: e799919f-4183-11e8-999b-00505693043c
+spec:
+  failedBuildsHistoryLimit: 5
+  nodeSelector: null
+  output:
+    to:
+      kind: ImageStreamTag
+      name: 'openshift-microservice:latest'
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    contextDir: hello_phx
+    git:
+      ref: master
+      uri: 'https://github.com/shall3790/openshift-microservice.git'
+    sourceSecret:
+      name: account
+    type: Git
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: 'elixir:1.4'
+        namespace: myproject
+    type: Source
+  successfulBuildsHistoryLimit: 5
+  triggers:
+    - github:
+        secret: XFFtUyLUhoC5bc_IE2Vq
+      type: GitHub
+    - generic:
+        secret: ao-i8-LGoviPcnvTozUr
+      type: Generic
+    - type: ConfigChange
+    - imageChange:
+        lastTriggeredImageID: >-
+          es1o/s2i-elixir@sha256:ca3da9caef8d426cbac9b123c4611a8c32fe2d1dc39c8d8e879a0862f40d69b4
+      type: ImageChange
+status:
+  lastVersion: 2

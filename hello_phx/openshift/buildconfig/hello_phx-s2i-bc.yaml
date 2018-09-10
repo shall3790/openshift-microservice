@@ -1,0 +1,43 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    app: hello-phx
+  name: hello-phx
+  namespace: myproject
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: 'hello-phx-artifact:latest'
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    contextDir: hello_phx
+    git:
+      ref: stephen-wip-1
+      uri: 'http://hlgithub.hobbylobby.corp/stmhall1/openshift-microservice.git'
+    sourceSecret:
+      name: svc-jenkins
+    type: Git
+  strategy:
+    sourceStrategy:
+      env:
+        - name: BUILD_ENV
+          value: dev  
+      from:
+        kind: ImageStreamTag
+        name: 's2i-phoenix:1.5.3'
+        namespace: openshift
+    type: Source
+triggers:
+- github:
+    secret: BugfR_Q0qHD-BHWQOOC4
+    type: GitHub
+- generic:
+    secret: pXg2MMn4WYihVW4RBi-T
+    type: Generic
+- type: ConfigChange
+- imageChange:
+    type: ImageChange    

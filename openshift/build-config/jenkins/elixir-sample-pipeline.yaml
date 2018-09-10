@@ -1,0 +1,123 @@
+kind: "BuildConfig"
+apiVersion: "v1"
+metadata:
+  name: "elixir-sample-pipeline"
+spec:
+  source:
+    contextDir: hello_phx
+    git:
+      ref: stephen-wip-1
+      uri: 'http://hlgithub.hobbylobby.corp/stmhall1/openshift-microservice.git'
+    sourceSecret:
+      name: svc-jenkins
+    type: Git
+  strategy:
+    jenkinsPipelineStrategy:
+      env:
+        - name: PS_GIT_URI
+          value: 'http://hlgithub.hobbylobby.corp/stmhall1/openshift-microservice.git'
+        - name: PS_GIT_REF
+          value: stephen-wip-1
+      jenkinsfile: |-
+        pipeline {
+            agent {
+              node {
+                // spin up a node.js slave pod to run this build on
+                label 'agent-elixir'
+              }
+            }
+            options {
+                // set a timeout of 20 minutes for this pipeline
+                timeout(time: 20, unit: 'MINUTES')
+            }
+
+            stages {
+                stage('preamble') {
+                    steps {
+                        script {
+                            openshift.withCluster() {
+                                openshift.withProject() {
+                                    echo "Using project: ${openshift.project()}"
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('checkout') {
+                    steps {
+                        script {
+                            checkout([$class           : 'GitSCM',
+                                    branches         : [[name: "*/${PS_GIT_REF}"]],
+                                    userRemoteConfigs: [[credentialsId: 'myproject-svc-jenkins', url: "${PS_GIT_URI}"]]
+                            ]);
+                            sh "ls -la"
+                            def commit_id = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+                            echo "${commit_id}"
+                        }
+                    }
+                }
+                stage('cleanup') {
+                    steps {
+                        script {
+                            openshift.withCluster() {
+                                openshift.withProject() {
+                                    sh "echo cleanup step"
+                                }
+                            }
+                        } // script
+                    } // steps
+                } // stage
+                stage('create') {
+                    steps {
+                        script {
+                            openshift.withCluster() {
+                                openshift.withProject() {
+                                    // create a new application from the templatePath
+                                    sh "echo create step"
+                                }
+                            }
+                        } // script
+                    } // steps
+                } // stage
+                stage('build') {
+                    steps {
+                        script {
+                            openshift.withCluster() {
+                                openshift.withProject() {
+                                    sh "echo build step"
+                                    // .related('builds')
+                                    def bc = openshift.selector("bc", "hello-phx") 
+                                    bc.describe()
+                                    // openshift.selector( [ 'bc/hello-phx' ] ).describe()
+                                    def buildSelector = bc.startBuild()
+                                    buildSelector.logs('-f')
+                                }
+                            }
+                        } // script
+                    } // steps
+                } // stage
+                stage('deploy') {
+                    steps {
+                        script {
+                            openshift.withCluster() {
+                                openshift.withProject() {
+                                    sh "echo deploy step"
+                                }
+                            }
+                        } // script
+                    } // steps
+                } // stage
+                stage('tag') {
+                    steps {
+                        script {
+                            openshift.withCluster() {
+                                openshift.withProject() {
+                                    sh "echo tag step"
+                                }
+                            }
+                        } // script
+                    } // steps
+                } // stage
+            } // stages
+        } // pipeline
+      type: JenkinsPipeline
